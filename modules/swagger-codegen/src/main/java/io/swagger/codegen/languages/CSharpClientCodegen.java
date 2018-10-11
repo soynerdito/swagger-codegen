@@ -408,7 +408,7 @@ public class CSharpClientCodegen extends AbstractCSharpCodegen {
         supportingFiles.add(new SupportingFile("git_push.sh.mustache", "", "git_push.sh"));
         supportingFiles.add(new SupportingFile("gitignore.mustache", "", ".gitignore"));
 
-        if (optionalAssemblyInfoFlag && Boolean.FALSE.equals(this.netCoreProjectFileFlag)) {
+        if (optionalAssemblyInfoFlag && Boolean.FALSE.equals(this.netCoreProjectFileFlag) && Boolean.FALSE.equals(this.netStandard) ) {
             supportingFiles.add(new SupportingFile("AssemblyInfo.mustache", packageFolder + File.separator + "Properties", "AssemblyInfo.cs"));
         }
         if (optionalProjectFileFlag) {
@@ -417,9 +417,13 @@ public class CSharpClientCodegen extends AbstractCSharpCodegen {
             if (Boolean.TRUE.equals(this.netCoreProjectFileFlag)) {
                 supportingFiles.add(new SupportingFile("netcore_project.mustache", packageFolder, packageName + ".csproj"));
             } else {
-                supportingFiles.add(new SupportingFile("Project.mustache", packageFolder, packageName + ".csproj"));
+                
                 if (Boolean.FALSE.equals(this.netStandard)) {
                     supportingFiles.add(new SupportingFile("nuspec.mustache", packageFolder, packageName + ".nuspec"));
+                }if (Boolean.TRUE.equals(this.netStandard)) {
+                    supportingFiles.add(new SupportingFile("project_standard.mustache", packageFolder, packageName + ".csproj"));
+                }else{
+                    supportingFiles.add(new SupportingFile("Project.mustache", packageFolder, packageName + ".csproj"));
                 }
             }
 
