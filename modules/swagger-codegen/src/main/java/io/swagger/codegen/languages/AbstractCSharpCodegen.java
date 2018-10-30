@@ -148,7 +148,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         typeMapping.put("binary", "byte[]");
         typeMapping.put("bytearray", "byte[]");
         typeMapping.put("boolean", "bool?");
-        typeMapping.put("integer", "int?");
+        typeMapping.put("integer", "int?");        
         typeMapping.put("float", "float?");
         typeMapping.put("long", "long?");
         typeMapping.put("double", "double?");
@@ -488,6 +488,10 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
                 var.isString = false;
                 var.isLong = false;
                 var.isInteger = false;
+            } else if ("int".equals(var.dataFormat)) {
+                var.isInteger = true;
+                var.isString = false;
+                var.isLong = false;
             } else if ("int32".equals(var.dataFormat)) {
                 var.isInteger = true;
                 var.isString = false;

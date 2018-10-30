@@ -671,6 +671,145 @@ public class CSharpClientCodegen extends AbstractCSharpCodegen {
 
         return codegenModel;
     }
+    
+    /**
+     * post process enum defined in model's properties
+     *
+     * @param objs Map of models
+     * @return maps of models with better enum support
+     */
+    @Override
+    public Map<String, Object> postProcessModelsEnum(Map<String, Object> objs) {
+        List<Object> models = (List<Object>) objs.get("models");
+        for (Object _mo : models) {
+            Map<String, Object> mo = (Map<String, Object>) _mo;
+            CodegenModel cm = (CodegenModel) mo.get("model");
+
+            // for enum model
+            if (Boolean.TRUE.equals(cm.isEnum) && cm.allowableValues != null) {
+                Map<String, Object> allowableValues = cm.allowableValues;
+                List<Object> values = (List<Object>) allowableValues.get("values");
+                List<Map<String, String>> enumVars = new ArrayList<Map<String, String>>();
+                String commonPrefix = findCommonPrefixOfVars(values);
+                int truncateIdx = commonPrefix.length();
+                for (Object value : values) {
+                    Map<String, String> enumVar = new HashMap<String, String>();
+                    String enumName;
+                    if (truncateIdx == 0) {
+                        enumName = value.toString();
+                    } else {
+                        enumName = value.toString().substring(truncateIdx);
+                        if ("".equals(enumName)) {
+                            enumName = value.toString();
+                        }
+                    }
+                    enumVar.put("name", toEnumVarName(enumName, cm.dataType, cm.description));
+                    enumVar.put("value", toEnumValue(value.toString(), cm.dataType));
+                    enumVars.add(enumVar);
+                }
+                cm.allowableValues.put("enumVars", enumVars);
+            }
+
+            // update codegen property enum with proper naming convention
+            // and handling of numbers, special characters
+            for (CodegenProperty var : cm.vars) {
+                updateCodegenPropertyEnum(var);
+            }
+
+        }
+        return objs;
+    }
+
+    /**
+     * Update codegen property's enum by adding "enumVars" (with name and value)
+     *
+     * @param var list of CodegenProperty
+     */
+    @Override
+    public void updateCodegenPropertyEnum(CodegenProperty var) {
+        Map<String, Object> allowableValues = var.allowableValues;
+
+        // handle ArrayProperty
+        if (var.items != null) {
+            allowableValues = var.items.allowableValues;
+        }
+
+        if (allowableValues == null) {
+            return;
+        }
+
+        List<Object> values = (List<Object>) allowableValues.get("values");
+        if (values == null) {
+            return;
+        }
+
+        // put "enumVars" map into `allowableValues", including `name` and `value`
+        List<Map<String, String>> enumVars = new ArrayList<Map<String, String>>();
+        String commonPrefix = findCommonPrefixOfVars(values);
+        int truncateIdx = commonPrefix.length();
+        for (Object value : values) {
+            Map<String, String> enumVar = new HashMap<String, String>();
+            String enumName;
+            if (truncateIdx == 0) {
+                enumName = value.toString();
+            } else {
+                enumName = value.toString().substring(truncateIdx);
+                if ("".equals(enumName)) {
+                    enumName = value.toString();
+                }
+            }
+            enumVar.put("name", toEnumVarName(enumName, var.datatype, var.description));
+            enumVar.put("value", toEnumValue(value.toString(), var.datatype));
+            enumVars.add(enumVar);
+        }
+        allowableValues.put("enumVars", enumVars);
+
+        // handle default value for enum, e.g. available => StatusEnum.AVAILABLE
+        if (var.defaultValue != null) {
+            String enumName = null;
+            for (Map<String, String> enumVar : enumVars) {
+                if (toEnumValue(var.defaultValue, var.datatype).equals(enumVar.get("value"))) {
+                    enumName = enumVar.get("name");
+                    break;
+                }
+            }
+            if (enumName != null) {
+                var.defaultValue = toEnumDefaultValue(enumName, var.datatypeWithEnum);
+            }
+        }
+    }
+
+    private Map<String,String> parsePropNames(String description)
+    {
+        System.out.println("parsePropNames: " + description );
+        Map<String,String> propNames = new HashMap<String,String>();
+        try{
+            int startIdx = description.indexOf("[");
+            int endIdx = description.lastIndexOf("]");
+            String clean = description.substring(startIdx+1, endIdx); 
+            String parts[] = clean.split(",");
+            String mapParts[];
+            for( String part : parts){
+                mapParts = part.split("=");
+                propNames.put(mapParts[1].trim(), mapParts[0].trim());
+            }
+        }catch(Exception ex){
+            System.out.println("parsePropNames: (Exception)" + ex.getMessage() );
+            //Any exception forget about it
+            //Make sure map is empty
+            propNames = new HashMap<String,String>();
+        }
+        return propNames;
+    }
+
+    public String toEnumVarName(String value, String datatype, String enumDescription ) {
+        Map<String,String> propNames = parsePropNames(enumDescription);
+        if( propNames.containsKey(value)){
+            return propNames.get(value);
+        }
+        //Return default
+        return toEnumVarName( value, datatype);
+    }
 
     @Override
     public String toEnumVarName(String value, String datatype) {
